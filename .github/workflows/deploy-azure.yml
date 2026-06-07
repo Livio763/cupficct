@@ -46,6 +46,10 @@ jobs:
 
       - name: Prepare deployment package
         run: |
+          # Copy public content to root so Azure serves Laravel correctly
+          cp -r public/* . 2>/dev/null || true
+          cp public/.* . 2>/dev/null || true
+          # Create zip excluding unnecessary files
           zip -r deploy.zip . -x ".git/*" ".github/*" "node_modules/*" "tests/*" ".env" ".env.example" "storage/debugbar/*" "storage/framework/cache/data/*" "*.gitignore"
 
       - name: Azure Login (OIDC)
