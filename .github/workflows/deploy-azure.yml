@@ -46,9 +46,7 @@ jobs:
 
       - name: Prepare deployment package
         run: |
-          mkdir -p deployment
-          rsync -a --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='.env.example' --exclude='storage/debugbar' --exclude='storage/framework/cache/data' . deployment/
-          cd deployment && zip -r ../deploy.zip .
+          zip -r deploy.zip . -x ".git/*" ".github/*" "node_modules/*" "tests/*" ".env" ".env.example" "storage/debugbar/*" "storage/framework/cache/data/*" "*.gitignore"
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -64,4 +62,4 @@ jobs:
           package: deploy.zip
 
       - name: Cleanup
-        run: rm -rf deployment deploy.zip
+        run: rm -f deploy.zip
