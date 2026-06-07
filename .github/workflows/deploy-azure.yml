@@ -1,0 +1,67 @@
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches: [ main, livi, peco ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, pgsql, xml, zip
+          tools: composer:v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Install NPM dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Optimize Laravel
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: Prepare deployment package
+        run: |
+          mkdir -p deployment
+          rsync -a --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='.env.example' --exclude='storage/debugbar' --exclude='storage/framework/cache/data' . deployment/
+          cd deployment && zip -r ../deploy.zip .
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: b1658fb0-2a82-414b-8a30-0bdc356987ef
+          tenant-id: 219c73f5-de61-4411-b406-bcd3f61accbc
+          subscription-id: 38690c89-b2ef-4cbf-9bd0-6264568b4b60
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: cupp-ficct
+          package: deploy.zip
+
+      - name: Cleanup
+        run: rm -rf deployment deploy.zip
